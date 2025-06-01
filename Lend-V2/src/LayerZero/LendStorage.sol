@@ -66,7 +66,8 @@ contract LendStorage is Ownable, ExponentialNoError {
 
     // Token mappings
     mapping(address lToken => address underlying) public lTokenToUnderlying;
-    mapping(address underlying => address lToken) public underlyingTolToken;
+    mapping(address underlying => address lToken) public underlyingTolToken; //@seashell 能在 mapping 找到對應的 1Tkoken
+    //@seashell 的代幣，才能夠靠 supply 函數存進來
     mapping(address underlying => mapping(uint256 destId => address destUnderlying)) public underlyingToDestUnderlying;
     mapping(address underlying => mapping(uint256 destId => address destlToken)) public underlyingToDestlToken;
 
@@ -135,7 +136,7 @@ contract LendStorage is Ownable, ExponentialNoError {
         emit LendtrollerSet(_lendtroller);
     }
 
-    // Asset management functions
+    // Asset management functions          //@seashell 新加入一種可被允許存入的代幣，and create a new 1Tkoken for it
     function addSupportedTokens(address underlying, address lToken) external onlyOwner {
         require(underlying != address(0) && lToken != address(0), "Invalid addresses");
         underlyingTolToken[underlying] = lToken;
@@ -168,7 +169,7 @@ contract LendStorage is Ownable, ExponentialNoError {
     }
 
     function addUserSuppliedAsset(address user, address lTokenAddress) external onlyAuthorized {
-        if (!userSuppliedAssets[user].contains(lTokenAddress)) {
+        if (!userSuppliedAssets[user].contains(lTokenAddress)) { //@seashell enumerableSet 所以才可以用contains方法 原生沒有contain
             userSuppliedAssets[user].add(lTokenAddress);
         }
     }
@@ -303,6 +304,10 @@ contract LendStorage is Ownable, ExponentialNoError {
     function distributeSupplierLend(address lToken, address supplier) external onlyAuthorized {
         // Trigger supply index update
         LendtrollerInterfaceV2(lendtroller).triggerSupplyIndexUpdate(lToken);
+        /*@seashell    function triggerSupplyIndexUpdate(address lToken) external {
+        require(msg.sender == lendStorageAddress, "access denied");
+        updateLendSupplyIndex(lToken);
+    } */
 
         // Get the appropriate lend state based on whether it's for supply or borrow
         (uint224 supplyIndex,) = LendtrollerInterfaceV2(lendtroller).lendSupplyState(lToken);

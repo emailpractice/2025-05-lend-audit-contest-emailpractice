@@ -51,7 +51,7 @@ contract LTokenStorage {
     /**
      * @notice Model which tells what the current interest rate should be
      */
-    InterestRateModel public interestRateModel;
+    InterestRateModel public interestRateModel; //@seashell前面是抽象合約 是個類別  後面小寫的才是實例化的合約
 
     // Initial exchange rate used when minting the first LTokens (used when totalSupply = 0)
     uint256 internal initialExchangeRateMantissa;

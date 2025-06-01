@@ -58,27 +58,42 @@ contract CoreRouter is Ownable, ExponentialNoError {
      * @param _amount The amount of tokens to supply.
      * @param _token The address of the token to be supplied.
      */
+     //@audit 我到底能不能放奇怪的代幣進來，就算進來，下面還會有觸發需要 exchage rate的時刻， 而奇怪代幣可能會搞不到exchage rate
+     
     function supply(uint256 _amount, address _token) external {
-        address _lToken = lendStorage.underlyingTolToken(_token);
+        address _lToken = lendStorage.underlyingTolToken(_token); //@seashell address _token is not all allowed,
+        //@seashell only protocol supported tokens are allowed.(has coressponding lToken)  
+        //
 
-        require(_lToken != address(0), "Unsupported Token");
+        require(_lToken != address(0), "Unsupported Token"); 
+//@seashell if mapping hasn't registered  _token, it will return address(0)   
+//@seashell Check if the token is supported by the protocol. So below use _token instead of _lToken is maybe fine
+
 
         require(_amount > 0, "Zero supply amount");
 
         // Transfer tokens from the user to the contract
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
 
+//@seashell 給1token 合約approve 真代幣的數量。 未來要把錢轉給1token合約
         _approveToken(_token, _lToken, _amount);
 
         // Get exchange rate before mint
-        uint256 exchangeRateBefore = LTokenInterface(_lToken).exchangeRateStored();
+        uint256 exchangeRateBefore = LTokenInterface(_lToken).exchangeRateStored(); //在src/Ltoken.sol裡面
+        //@seashell       If there are no tokens minted: exchangeRate = initialExchangeRate
+        //@seashell Otherwise: exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
+    
 
         // Mint lTokens
-        require(LErc20Interface(_lToken).mint(_amount) == 0, "Mint failed");
+        require(LErc20Interface(_lToken).mint(_amount) == 0, "Mint failed"); //@seashell在src/LErc20.sol
+        // @audit: mint是external 然後沒有modifier的。會呼叫Ltoken的mintInternal  (internal nonReentrant)
+// mintInternal會呼叫同合約的accure interest()，然後再呼叫mintFresh()。
 
         // Calculate actual minted tokens using exchangeRate from before mint
+                //@audit: rounding error might happen in edge case. need to know more about exchagerateBefore
         uint256 mintTokens = (_amount * 1e18) / exchangeRateBefore;
 
+//@seashell這個合約要是only authorized才能呼叫成功addSupply。 他就是在一個mapping 裡面紀錄一下，"現在還有多一個這種asset的token"
         lendStorage.addUserSuppliedAsset(msg.sender, _lToken);
 
         lendStorage.distributeSupplierLend(_lToken, msg.sender);
@@ -253,7 +268,7 @@ contract CoreRouter is Ownable, ExponentialNoError {
      * @param collateral The collateral amount
      * @param borrowed The borrowed amount
      */
-    function liquidateBorrowInternal(
+    function _liquidateBorrowInternal(
         address liquidator,
         address borrower,
         uint256 repayAmount,
@@ -440,9 +455,14 @@ contract CoreRouter is Ownable, ExponentialNoError {
      * @param _approvalAddress The address to approve
      * @param _amount The amount to approve
      */
+     //@seashell _approvalAddress is 1token. _token is the underlying token of the lToken(what user is supplying)
     function _approveToken(address _token, address _approvalAddress, uint256 _amount) internal {
+        //@seashell this contract's allowance for 1token.
         uint256 currentAllowance = IERC20(_token).allowance(address(this), _approvalAddress);
+
+//@seashell 檢查此合約對1token的授權金額是否足夠，那代表這個合約未來想轉錢過去給1token (轉給他用戶存進來的真代幣，數量是真代幣的數量)
         if (currentAllowance < _amount) {
+            //@seashell 如果當前授權金額大於0，則先將其設置為0
             if (currentAllowance > 0) {
                 IERC20(_token).safeApprove(_approvalAddress, 0);
             }

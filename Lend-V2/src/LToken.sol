@@ -193,6 +193,7 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Function to simply retrieve block number
      *  This exists mainly for inheriting test contracts to stub this result.
      */
+     //@seashell多包一層函數好像只是為了測試的時候能亂改block.number的值? 但如果能仿冒block.number 有沒有包一層也都無所謂吧
     function getBlockNumber() internal view virtual returns (uint256) {
         return block.number;
     }
@@ -323,12 +324,14 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      */
     function accrueInterest() public virtual override returns (uint256) {
         /* Remember the initial block number */
-        uint256 currentBlockNumber = getBlockNumber();
-        uint256 accrualBlockNumberPrior = accrualBlockNumber;
+        uint256 currentBlockNumber = getBlockNumber(); //@seashell用block.number取得現在區塊記錄到哪。看是哪條鍊就哪條的
+        uint256 accrualBlockNumberPrior = accrualBlockNumber; //@seashell Block number that interest was last accrued at
+
 
         /* Short-circuit accumulating 0 interest */
         if (accrualBlockNumberPrior == currentBlockNumber) {
-            return NO_ERROR;
+            return NO_ERROR; //@seashell no_error是常數0。 這樣寫是常見的，用語義化的方式表達正確或錯誤。
+            // @audit:原本在想能不能硬湊出回傳值是0來蒙騙，但下面的return都不是return變數，都是return這個常數，所以應該沒問題
         }
 
         /* Read the previous values out of storage */
@@ -338,7 +341,13 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         uint256 borrowIndexPrior = borrowIndex;
 
         /* Calculate the current borrow interest rate */
+        //@seashell interestRateModel 只是一個抽象合約。 要找繼承interestRateModel的合約們
+        //@seashell 初始化的時候選哪個要找繼承interestRateModel，這邊呼叫的就是那個
+        //@seashell 但我實在不知道它選誰，所以我就隨便選一個合約看具體實現。 這個repo雖然有更多人是繼承interestRatemodel
+        // 但只有兩個是有
+        //最後選定了 jumpRateModelV2.sol 因為它至少是V2 看起來像是比較新的實現
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
+
         require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
 
         /* Calculate the number of blocks elapsed since the last accrual */
