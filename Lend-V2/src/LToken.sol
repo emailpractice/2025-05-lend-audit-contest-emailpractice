@@ -6,7 +6,7 @@ import "./LTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./EIP20Interface.sol";
 import "./InterestRateModel.sol";
-import "./ExponentialNoError.sol";
+import "./ExponentialNoError.sol"exchangeRateStored;
 
 /**
  * @title Lend's LToken Contract
@@ -347,6 +347,8 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         // 但只有兩個是有
         //最後選定了 jumpRateModelV2.sol 因為它至少是V2 看起來像是比較新的實現
         uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
+//@seashell: 我想知道的是，同一個block 他的這些利率變數都不會再改了。 
+// 可是交易還在進行 還在累積阿 萬一區塊的第一筆交易讓利率大幅變動 但同區塊的最後一筆交易，卻還是會採用原本的利率。 有沒有這種危險呢? 
 
         require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
 

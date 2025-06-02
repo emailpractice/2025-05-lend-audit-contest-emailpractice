@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@poanet/solidity-flattener": "^3.0.9",
+    "solidity-parser-antlr": "^0.4.11"
+  }
+}
