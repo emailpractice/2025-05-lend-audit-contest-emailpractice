@@ -352,6 +352,7 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
 
         require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
 
+//@seashell:  算整個協議所有借款人的利息累積起來。 先計算從上次更新到現在過了多少block，再去乘上多少次利率這樣
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
 
@@ -363,6 +364,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
          *  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
          *  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
          */
+//@seashell: mul是來做小數點用的    第一行應該是 3區塊* borrowRate 
+// borrowRate好像是平均利率。 所以可以拿來算出整個協議待收的利息，
+// 個別借款人的利息，會用index來表達。 比如他借的利率其實比較高，那就borroRate * 1.1
 
         Exp memory simpleInterestFactor = mul_(Exp({mantissa: borrowRateMantissa}), blockDelta);
         uint256 interestAccumulated = mul_ScalarTruncate(simpleInterestFactor, borrowsPrior);
