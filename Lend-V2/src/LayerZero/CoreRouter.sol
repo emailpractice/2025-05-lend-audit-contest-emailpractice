@@ -124,12 +124,12 @@ contract CoreRouter is Ownable, ExponentialNoError {
 
         // mintInternal會呼叫同合約的accure interest()，然後再呼叫mintFresh()。
 
-//在baseJumprateModelV2裡面有利率的實際計算模型 getBorrowRateInternal  基本上是平常線性
-// 利用率高的時候利率會往上跳一個層級 (非連續的)
+        //在baseJumprateModelV2裡面有利率的實際計算模型 getBorrowRateInternal  基本上是平常線性
+        // 利用率高的時候利率會往上跳一個層級 (非連續的)
 
         // Calculate actual minted tokens using exchangeRate from before mint
         //@audit: rounding error might happen in edge case. need to know more about exchagerateBefore
-        uint256 mintTokens = (_amount * 1e18) / exchangeRateBefore;
+        uint256 mintTokens = (_amount * 1e18) / exchangeRateBefore; // (20 Itoken / _amount)
 
         //@seashell這個合約要是only authorized才能呼叫成功addSupply。 他就是在一個mapping 裡面紀錄一下，"現在還有多一個這種asset的token"
         lendStorage.addUserSuppliedAsset(msg.sender, _lToken);

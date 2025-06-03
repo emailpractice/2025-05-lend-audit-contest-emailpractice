@@ -13,7 +13,12 @@ import "./Governance/Lend.sol";
  * @title Lend's Lendtroller Contract
  * @author Compound
  */
-contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerErrorReporter, ExponentialNoError {
+contract Lendtroller is
+    LendtrollerV7Storage,
+    LendtrollerInterface,
+    LendtrollerErrorReporter,
+    ExponentialNoError
+{
     /// @notice Emitted when an admin supports a market
     event MarketListed(LToken lToken);
 
@@ -24,16 +29,29 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     event MarketExited(LToken lToken, address account);
 
     /// @notice Emitted when close factor is changed by admin
-    event NewCloseFactor(uint256 oldCloseFactorMantissa, uint256 newCloseFactorMantissa);
+    event NewCloseFactor(
+        uint256 oldCloseFactorMantissa,
+        uint256 newCloseFactorMantissa
+    );
 
     /// @notice Emitted when a collateral factor is changed by admin
-    event NewCollateralFactor(LToken lToken, uint256 oldCollateralFactorMantissa, uint256 newCollateralFactorMantissa);
+    event NewCollateralFactor(
+        LToken lToken,
+        uint256 oldCollateralFactorMantissa,
+        uint256 newCollateralFactorMantissa
+    );
 
     /// @notice Emitted when liquidation incentive is changed by admin
-    event NewLiquidationIncentive(uint256 oldLiquidationIncentiveMantissa, uint256 newLiquidationIncentiveMantissa);
+    event NewLiquidationIncentive(
+        uint256 oldLiquidationIncentiveMantissa,
+        uint256 newLiquidationIncentiveMantissa
+    );
 
     /// @notice Emitted when price oracle is changed
-    event NewPriceOracle(PriceOracle oldPriceOracle, PriceOracle newPriceOracle);
+    event NewPriceOracle(
+        PriceOracle oldPriceOracle,
+        PriceOracle newPriceOracle
+    );
 
     /// @notice Emitted when pause guardian is changed
     event NewPauseGuardian(address oldPauseGuardian, address newPauseGuardian);
@@ -51,32 +69,52 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     event LendSupplySpeedUpdated(LToken indexed lToken, uint256 newSpeed);
 
     /// @notice Emitted when a new LEND speed is set for a contributor
-    event ContributorLendSpeedUpdated(address indexed contributor, uint256 newSpeed);
+    event ContributorLendSpeedUpdated(
+        address indexed contributor,
+        uint256 newSpeed
+    );
 
     /// @notice Emitted when LEND is distributed to a supplier
     event DistributedSupplierLend(
-        LToken indexed lToken, address indexed supplier, uint256 lendDelta, uint256 lendSupplyIndex
+        LToken indexed lToken,
+        address indexed supplier,
+        uint256 lendDelta,
+        uint256 lendSupplyIndex
     );
 
     /// @notice Emitted when LEND is distributed to a borrower
     event DistributedBorrowerLend(
-        LToken indexed lToken, address indexed borrower, uint256 lendDelta, uint256 lendBorrowIndex
+        LToken indexed lToken,
+        address indexed borrower,
+        uint256 lendDelta,
+        uint256 lendBorrowIndex
     );
 
     /// @notice Emitted when borrow cap for a lToken is changed
     event NewBorrowCap(LToken indexed lToken, uint256 newBorrowCap);
 
     /// @notice Emitted when borrow cap guardian is changed
-    event NewBorrowCapGuardian(address oldBorrowCapGuardian, address newBorrowCapGuardian);
+    event NewBorrowCapGuardian(
+        address oldBorrowCapGuardian,
+        address newBorrowCapGuardian
+    );
 
     /// @notice Emitted when LEND is granted by admin
     event LendGranted(address recipient, uint256 amount);
 
     /// @notice Emitted when LEND accrued for a user has been manually adjusted.
-    event LendAccruedAdjusted(address indexed user, uint256 oldLendAccrued, uint256 newLendAccrued);
+    event LendAccruedAdjusted(
+        address indexed user,
+        uint256 oldLendAccrued,
+        uint256 newLendAccrued
+    );
 
     /// @notice Emitted when LEND receivable for a user has been updated.
-    event LendReceivableUpdated(address indexed user, uint256 oldLendReceivable, uint256 newLendReceivable);
+    event LendReceivableUpdated(
+        address indexed user,
+        uint256 oldLendReceivable,
+        uint256 newLendReceivable
+    );
 
     /// @notice The initial LEND index for a market
     uint224 public constant lendInitialIndex = 1e36;
@@ -117,7 +155,9 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param account The address of the account to pull assets for
      * @return A dynamic list with the assets the account has entered
      */
-    function getAssetsIn(address account) external view returns (LToken[] memory) {
+    function getAssetsIn(
+        address account
+    ) external view returns (LToken[] memory) {
         LToken[] memory assetsIn = accountAssets[account];
 
         return assetsIn;
@@ -129,7 +169,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The lToken to check
      * @return True if the account is in the asset, otherwise false.
      */
-    function checkMembership(address account, LToken lToken) external view returns (bool) {
+    function checkMembership(
+        address account,
+        LToken lToken
+    ) external view returns (bool) {
         return markets[address(lToken)].accountMembership[account];
     }
 
@@ -138,7 +181,9 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lTokens The list of addresses of the lToken markets to be enabled
      * @return Success indicator for whether each corresponding market was entered
      */
-    function enterMarkets(address[] memory lTokens) public override returns (uint256[] memory) {
+    function enterMarkets(
+        address[] memory lTokens
+    ) public override returns (uint256[] memory) {
         uint256 len = lTokens.length;
 
         uint256[] memory results = new uint256[](len);
@@ -157,7 +202,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param borrower The address of the account to modify
      * @return Success indicator for whether the market was entered
      */
-    function addToMarketInternal(LToken lToken, address borrower) internal returns (Error) {
+    function addToMarketInternal(
+        LToken lToken,
+        address borrower
+    ) internal returns (Error) {
         Market storage marketToJoin = markets[address(lToken)];
 
         if (!marketToJoin.isListed) {
@@ -190,21 +238,37 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lTokenAddress The address of the asset to be removed
      * @return Whether or not the account successfully exited the market
      */
-    function exitMarket(address lTokenAddress) external override returns (uint256) {
+    function exitMarket(
+        address lTokenAddress
+    ) external override returns (uint256) {
         LToken lToken = LToken(lTokenAddress);
         /* Get sender tokensHeld and amountOwed underlying from the lToken */
-        (uint256 oErr, uint256 tokensHeld, uint256 amountOwed,) = lToken.getAccountSnapshot(msg.sender);
+        (uint256 oErr, uint256 tokensHeld, uint256 amountOwed, ) = lToken
+            .getAccountSnapshot(msg.sender);
         require(oErr == 0, "exitMarket: getAccountSnapshot failed"); // semi-opaque error code
 
         /* Fail if the sender has a borrow balance */
         if (amountOwed != 0) {
-            return fail(Error.NONZERO_BORROW_BALANCE, FailureInfo.EXIT_MARKET_BALANCE_OWED);
+            return
+                fail(
+                    Error.NONZERO_BORROW_BALANCE,
+                    FailureInfo.EXIT_MARKET_BALANCE_OWED
+                );
         }
 
         /* Fail if the sender is not permitted to redeem all of their tokens */
-        uint256 allowed = redeemAllowedInternal(lTokenAddress, msg.sender, tokensHeld);
+        uint256 allowed = redeemAllowedInternal(
+            lTokenAddress,
+            msg.sender,
+            tokensHeld
+        );
         if (allowed != 0) {
-            return failOpaque(Error.REJECTION, FailureInfo.EXIT_MARKET_REJECTION, allowed);
+            return
+                failOpaque(
+                    Error.REJECTION,
+                    FailureInfo.EXIT_MARKET_REJECTION,
+                    allowed
+                );
         }
 
         Market storage marketToExit = markets[address(lToken)];
@@ -253,7 +317,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param mintAmount The amount of underlying being supplied to the market in exchange for tokens
      * @return 0 if the mint is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function mintAllowed(address lToken, address minter, uint256 mintAmount) external override returns (uint256) {
+    function mintAllowed(
+        address lToken,
+        address minter,
+        uint256 mintAmount
+    ) external override returns (uint256) {
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!mintGuardianPaused[lToken], "mint is paused");
 
@@ -279,10 +347,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param actualMintAmount The amount of the underlying asset being minted
      * @param mintTokens The number of tokens being minted
      */
-    function mintVerify(address lToken, address minter, uint256 actualMintAmount, uint256 mintTokens)
-        external
-        override
-    {
+    function mintVerify(
+        address lToken,
+        address minter,
+        uint256 actualMintAmount,
+        uint256 mintTokens
+    ) external override {
         // Shh - currently unused
         lToken;
         minter;
@@ -302,11 +372,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param redeemTokens The number of lTokens to exchange for the underlying asset in the market
      * @return 0 if the redeem is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function redeemAllowed(address lToken, address redeemer, uint256 redeemTokens)
-        external
-        override
-        returns (uint256)
-    {
+    function redeemAllowed(
+        address lToken,
+        address redeemer,
+        uint256 redeemTokens
+    ) external override returns (uint256) {
         uint256 allowed = redeemAllowedInternal(lToken, redeemer, redeemTokens);
         if (allowed != uint256(Error.NO_ERROR)) {
             return allowed;
@@ -319,11 +389,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         return uint256(Error.NO_ERROR);
     }
 
-    function redeemAllowedInternal(address lToken, address redeemer, uint256 redeemTokens)
-        internal
-        view
-        returns (uint256)
-    {
+    function redeemAllowedInternal(
+        address lToken,
+        address redeemer,
+        uint256 redeemTokens
+    ) internal view returns (uint256) {
         if (!markets[lToken].isListed) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
@@ -334,8 +404,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         }
 
         /* Otherwise, perform a hypothetical liquidity check to guard against shortfall */
-        (Error err,, uint256 shortfall) =
-            getHypotheticalAccountLiquidityInternal(redeemer, LToken(lToken), redeemTokens, 0);
+        (
+            Error err,
+            ,
+            uint256 shortfall
+        ) = getHypotheticalAccountLiquidityInternal(
+                redeemer,
+                LToken(lToken),
+                redeemTokens,
+                0
+            );
         if (err != Error.NO_ERROR) {
             return uint256(err);
         }
@@ -354,11 +432,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param redeemAmount The amount of the underlying asset being redeemed
      * @param redeemTokens The number of tokens being redeemed
      */
-    function redeemVerify(address lToken, address redeemer, uint256 redeemAmount, uint256 redeemTokens)
-        external
-        pure
-        override
-    {
+    function redeemVerify(
+        address lToken,
+        address redeemer,
+        uint256 redeemAmount,
+        uint256 redeemTokens
+    ) external pure override {
         // Shh - currently unused
         lToken;
         redeemer;
@@ -376,11 +455,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param borrowAmount The amount of underlying the account would borrow
      * @return 0 if the borrow is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function borrowAllowed(address lToken, address borrower, uint256 borrowAmount)
-        external
-        override
-        returns (uint256)
-    {
+    function borrowAllowed(
+        address lToken,
+        address borrower,
+        uint256 borrowAmount
+    ) external override returns (uint256) {
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!borrowGuardianPaused[lToken], "borrow is paused");
 
@@ -414,8 +493,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             require(nextTotalBorrows < borrowCap, "market borrow cap reached");
         }
 
-        (Error err,, uint256 shortfall) =
-            getHypotheticalAccountLiquidityInternal(borrower, LToken(lToken), 0, borrowAmount);
+        (
+            Error err,
+            ,
+            uint256 shortfall
+        ) = getHypotheticalAccountLiquidityInternal(
+                borrower,
+                LToken(lToken),
+                0,
+                borrowAmount
+            );
         if (err != Error.NO_ERROR) {
             return uint256(err);
         }
@@ -438,7 +525,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param borrower The address borrowing the underlying
      * @param borrowAmount The amount of the underlying asset requested to borrow
      */
-    function borrowVerify(address lToken, address borrower, uint256 borrowAmount) external override {
+    function borrowVerify(
+        address lToken,
+        address borrower,
+        uint256 borrowAmount
+    ) external override {
         // Shh - currently unused
         lToken;
         borrower;
@@ -458,11 +549,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param repayAmount The amount of the underlying asset the account would repay
      * @return 0 if the repay is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function repayBorrowAllowed(address lToken, address payer, address borrower, uint256 repayAmount)
-        external
-        override
-        returns (uint256)
-    {
+    function repayBorrowAllowed(
+        address lToken,
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) external override returns (uint256) {
         // Shh - currently unused
         payer;
         borrower;
@@ -525,18 +617,28 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         // Shh - currently unused
         liquidator;
 
-        if (!markets[lTokenBorrowed].isListed || !markets[lTokenCollateral].isListed) {
+        if (
+            !markets[lTokenBorrowed].isListed ||
+            !markets[lTokenCollateral].isListed
+        ) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        uint256 borrowBalance = LToken(lTokenBorrowed).borrowBalanceStored(borrower);
+        uint256 borrowBalance = LToken(lTokenBorrowed).borrowBalanceStored(
+            borrower
+        );
 
         /* allow accounts to be liquidated if the market is deprecated */
         if (isDeprecated(LToken(lTokenBorrowed))) {
-            require(borrowBalance >= repayAmount, "Can not repay more than the total borrow");
+            require(
+                borrowBalance >= repayAmount,
+                "Can not repay more than the total borrow"
+            );
         } else {
             /* The borrower must have shortfall in order to be liquidatable */
-            (Error err,, uint256 shortfall) = getAccountLiquidityInternal(borrower);
+            (Error err, , uint256 shortfall) = getAccountLiquidityInternal(
+                borrower
+            );
             if (err != Error.NO_ERROR) {
                 return uint256(err);
             }
@@ -546,7 +648,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             }
 
             /* The liquidator may not repay more than what is allowed by the closeFactor */
-            uint256 maxClose = mul_ScalarTruncate(Exp({mantissa: closeFactorMantissa}), borrowBalance);
+            uint256 maxClose = mul_ScalarTruncate(
+                Exp({mantissa: closeFactorMantissa}),
+                borrowBalance
+            );
             if (repayAmount > maxClose) {
                 return uint256(Error.TOO_MUCH_REPAY);
             }
@@ -605,11 +710,17 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         // Shh - currently unused
         seizeTokens;
 
-        if (!markets[lTokenCollateral].isListed || !markets[lTokenBorrowed].isListed) {
+        if (
+            !markets[lTokenCollateral].isListed ||
+            !markets[lTokenBorrowed].isListed
+        ) {
             return uint256(Error.MARKET_NOT_LISTED);
         }
 
-        if (LToken(lTokenCollateral).lendtroller() != LToken(lTokenBorrowed).lendtroller()) {
+        if (
+            LToken(lTokenCollateral).lendtroller() !=
+            LToken(lTokenBorrowed).lendtroller()
+        ) {
             return uint256(Error.LENDTROLLER_MISMATCH);
         }
 
@@ -657,11 +768,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param transferTokens The number of lTokens to transfer
      * @return 0 if the transfer is allowed, otherwise a semi-opaque error code (See ErrorReporter.sol)
      */
-    function transferAllowed(address lToken, address src, address dst, uint256 transferTokens)
-        external
-        override
-        returns (uint256)
-    {
+    function transferAllowed(
+        address lToken,
+        address src,
+        address dst,
+        uint256 transferTokens
+    ) external override returns (uint256) {
         // Pausing is a very serious situation - we revert to sound the alarms
         require(!transferGuardianPaused, "transfer is paused");
 
@@ -687,7 +799,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param dst The account which receives the tokens
      * @param transferTokens The number of lTokens to transfer
      */
-    function transferVerify(address lToken, address src, address dst, uint256 transferTokens) external override {
+    function transferVerify(
+        address lToken,
+        address src,
+        address dst,
+        uint256 transferTokens
+    ) external override {
         // Shh - currently unused
         lToken;
         src;
@@ -728,9 +845,19 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      *             account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
      */
-    function getAccountLiquidity(address account) public view returns (uint256, uint256, uint256) {
-        (Error err, uint256 liquidity, uint256 shortfall) =
-            getHypotheticalAccountLiquidityInternal(account, LToken(address(0)), 0, 0);
+    function getAccountLiquidity(
+        address account
+    ) public view returns (uint256, uint256, uint256) {
+        (
+            Error err,
+            uint256 liquidity,
+            uint256 shortfall
+        ) = getHypotheticalAccountLiquidityInternal(
+                account,
+                LToken(address(0)),
+                0,
+                0
+            );
 
         return (uint256(err), liquidity, shortfall);
     }
@@ -741,8 +868,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      *             account liquidity in excess of collateral requirements,
      *          account shortfall below collateral requirements)
      */
-    function getAccountLiquidityInternal(address account) internal view returns (Error, uint256, uint256) {
-        return getHypotheticalAccountLiquidityInternal(account, LToken(address(0)), 0, 0);
+    function getAccountLiquidityInternal(
+        address account
+    ) internal view returns (Error, uint256, uint256) {
+        return
+            getHypotheticalAccountLiquidityInternal(
+                account,
+                LToken(address(0)),
+                0,
+                0
+            );
     }
 
     /**
@@ -761,8 +896,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         uint256 redeemTokens,
         uint256 borrowAmount
     ) public view returns (uint256, uint256, uint256) {
-        (Error err, uint256 liquidity, uint256 shortfall) =
-            getHypotheticalAccountLiquidityInternal(account, LToken(lTokenModify), redeemTokens, borrowAmount);
+        (
+            Error err,
+            uint256 liquidity,
+            uint256 shortfall
+        ) = getHypotheticalAccountLiquidityInternal(
+                account,
+                LToken(lTokenModify),
+                redeemTokens,
+                borrowAmount
+            );
         return (uint256(err), liquidity, shortfall);
     }
 
@@ -793,13 +936,19 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             LToken asset = assets[i];
 
             // Read the balances and exchange rate from the lToken
-            (oErr, vars.lTokenBalance, vars.borrowBalance, vars.exchangeRateMantissa) =
-                asset.getAccountSnapshot(account);
+            (
+                oErr,
+                vars.lTokenBalance,
+                vars.borrowBalance,
+                vars.exchangeRateMantissa
+            ) = asset.getAccountSnapshot(account);
             if (oErr != 0) {
                 // semi-opaque error code, we assume NO_ERROR == 0 is invariant between upgrades
                 return (Error.SNAPSHOT_ERROR, 0, 0);
             }
-            vars.collateralFactor = Exp({mantissa: markets[address(asset)].collateralFactorMantissa});
+            vars.collateralFactor = Exp({
+                mantissa: markets[address(asset)].collateralFactorMantissa
+            });
             vars.exchangeRate = Exp({mantissa: vars.exchangeRateMantissa});
 
             // Get the normalized price of the asset
@@ -810,34 +959,58 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             vars.oraclePrice = Exp({mantissa: vars.oraclePriceMantissa});
 
             // Pre-compute a conversion factor from tokens -> ether (normalized price value)
-            vars.tokensToDenom = mul_(mul_(vars.collateralFactor, vars.exchangeRate), vars.oraclePrice);
+            vars.tokensToDenom = mul_(
+                mul_(vars.collateralFactor, vars.exchangeRate),
+                vars.oraclePrice
+            );
 
             // sumCollateral += tokensToDenom * lTokenBalance
-            vars.sumCollateral = mul_ScalarTruncateAddUInt(vars.tokensToDenom, vars.lTokenBalance, vars.sumCollateral);
+            vars.sumCollateral = mul_ScalarTruncateAddUInt(
+                vars.tokensToDenom,
+                vars.lTokenBalance,
+                vars.sumCollateral
+            );
 
             // sumBorrowPlusEffects += oraclePrice * borrowBalance
-            vars.sumBorrowPlusEffects =
-                mul_ScalarTruncateAddUInt(vars.oraclePrice, vars.borrowBalance, vars.sumBorrowPlusEffects);
+            vars.sumBorrowPlusEffects = mul_ScalarTruncateAddUInt(
+                vars.oraclePrice,
+                vars.borrowBalance,
+                vars.sumBorrowPlusEffects
+            );
 
             // Calculate effects of interacting with lTokenModify
             if (asset == lTokenModify) {
                 // redeem effect
                 // sumBorrowPlusEffects += tokensToDenom * redeemTokens
-                vars.sumBorrowPlusEffects =
-                    mul_ScalarTruncateAddUInt(vars.tokensToDenom, redeemTokens, vars.sumBorrowPlusEffects);
+                vars.sumBorrowPlusEffects = mul_ScalarTruncateAddUInt(
+                    vars.tokensToDenom,
+                    redeemTokens,
+                    vars.sumBorrowPlusEffects
+                );
 
                 // borrow effect
                 // sumBorrowPlusEffects += oraclePrice * borrowAmount
-                vars.sumBorrowPlusEffects =
-                    mul_ScalarTruncateAddUInt(vars.oraclePrice, borrowAmount, vars.sumBorrowPlusEffects);
+                vars.sumBorrowPlusEffects = mul_ScalarTruncateAddUInt(
+                    vars.oraclePrice,
+                    borrowAmount,
+                    vars.sumBorrowPlusEffects
+                );
             }
         }
 
         // These are safe, as the underflow condition is checked first
         if (vars.sumCollateral > vars.sumBorrowPlusEffects) {
-            return (Error.NO_ERROR, vars.sumCollateral - vars.sumBorrowPlusEffects, 0);
+            return (
+                Error.NO_ERROR,
+                vars.sumCollateral - vars.sumBorrowPlusEffects,
+                0
+            );
         } else {
-            return (Error.NO_ERROR, 0, vars.sumBorrowPlusEffects - vars.sumCollateral);
+            return (
+                Error.NO_ERROR,
+                0,
+                vars.sumBorrowPlusEffects - vars.sumCollateral
+            );
         }
     }
 
@@ -849,16 +1022,19 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param actualRepayAmount The amount of lTokenBorrowed underlying to convert into lTokenCollateral tokens
      * @return (errorCode, number of lTokenCollateral tokens to be seized in a liquidation)
      */
-    function liquidateCalculateSeizeTokens(address lTokenBorrowed, address lTokenCollateral, uint256 actualRepayAmount)
-        external
-        view
-        override
-        returns (uint256, uint256)
-    {
+    function liquidateCalculateSeizeTokens(
+        address lTokenBorrowed,
+        address lTokenCollateral,
+        uint256 actualRepayAmount
+    ) external view override returns (uint256, uint256) {
         /* Read oracle prices for borrowed and collateral markets */
-        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(LToken(lTokenBorrowed));
+        uint256 priceBorrowedMantissa = oracle.getUnderlyingPrice(
+            LToken(lTokenBorrowed)
+        );
 
-        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(LToken(lTokenCollateral));
+        uint256 priceCollateralMantissa = oracle.getUnderlyingPrice(
+            LToken(lTokenCollateral)
+        );
 
         if (priceBorrowedMantissa == 0 || priceCollateralMantissa == 0) {
             return (uint256(Error.PRICE_ERROR), 0);
@@ -870,16 +1046,23 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
          *  seizeTokens = seizeAmount / exchangeRate
          *   = actualRepayAmount * (liquidationIncentive * priceBorrowed) / (priceCollateral * exchangeRate)
          */
-        uint256 exchangeRateMantissa = LToken(lTokenCollateral).exchangeRateStored(); // Note: reverts on error
+        uint256 exchangeRateMantissa = LToken(lTokenCollateral)
+            .exchangeRateStored(); // Note: reverts on error
 
         uint256 seizeTokens;
         Exp memory numerator;
         Exp memory denominator;
         Exp memory ratio;
 
-        numerator = mul_(Exp({mantissa: liquidationIncentiveMantissa}), Exp({mantissa: priceBorrowedMantissa}));
+        numerator = mul_(
+            Exp({mantissa: liquidationIncentiveMantissa}),
+            Exp({mantissa: priceBorrowedMantissa})
+        );
 
-        denominator = mul_(Exp({mantissa: priceCollateralMantissa}), Exp({mantissa: exchangeRateMantissa}));
+        denominator = mul_(
+            Exp({mantissa: priceCollateralMantissa}),
+            Exp({mantissa: exchangeRateMantissa})
+        );
 
         ratio = div_(numerator, denominator);
 
@@ -900,7 +1083,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     function _setPriceOracle(PriceOracle newOracle) public returns (uint256) {
         // Check caller is admin
         if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK);
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.SET_PRICE_ORACLE_OWNER_CHECK
+                );
         }
 
         // Track the old oracle for the lendtroller
@@ -921,7 +1108,9 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param newCloseFactorMantissa New close factor, scaled by 1e18
      * @return uint 0=success, otherwise a failure
      */
-    function _setCloseFactor(uint256 newCloseFactorMantissa) external returns (uint256) {
+    function _setCloseFactor(
+        uint256 newCloseFactorMantissa
+    ) external returns (uint256) {
         // Check caller is admin
         require(msg.sender == admin, "only admin can set close factor");
 
@@ -939,29 +1128,53 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param newCollateralFactorMantissa The new collateral factor, scaled by 1e18
      * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
-    function _setCollateralFactor(LToken lToken, uint256 newCollateralFactorMantissa) external returns (uint256) {
+    function _setCollateralFactor(
+        LToken lToken,
+        uint256 newCollateralFactorMantissa
+    ) external returns (uint256) {
         // Check caller is admin
         if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_COLLATERAL_FACTOR_OWNER_CHECK);
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.SET_COLLATERAL_FACTOR_OWNER_CHECK
+                );
         }
 
         // Verify market is listed
         Market storage market = markets[address(lToken)];
         if (!market.isListed) {
-            return fail(Error.MARKET_NOT_LISTED, FailureInfo.SET_COLLATERAL_FACTOR_NO_EXISTS);
+            return
+                fail(
+                    Error.MARKET_NOT_LISTED,
+                    FailureInfo.SET_COLLATERAL_FACTOR_NO_EXISTS
+                );
         }
 
-        Exp memory newCollateralFactorExp = Exp({mantissa: newCollateralFactorMantissa});
+        Exp memory newCollateralFactorExp = Exp({
+            mantissa: newCollateralFactorMantissa
+        });
 
         // Check collateral factor <= 0.9
         Exp memory highLimit = Exp({mantissa: collateralFactorMaxMantissa});
         if (lessThanExp(highLimit, newCollateralFactorExp)) {
-            return fail(Error.INVALID_COLLATERAL_FACTOR, FailureInfo.SET_COLLATERAL_FACTOR_VALIDATION);
+            return
+                fail(
+                    Error.INVALID_COLLATERAL_FACTOR,
+                    FailureInfo.SET_COLLATERAL_FACTOR_VALIDATION
+                );
         }
 
         // If collateral factor != 0, fail if price == 0
-        if (newCollateralFactorMantissa != 0 && oracle.getUnderlyingPrice(lToken) == 0) {
-            return fail(Error.PRICE_ERROR, FailureInfo.SET_COLLATERAL_FACTOR_WITHOUT_PRICE);
+        if (
+            newCollateralFactorMantissa != 0 &&
+            oracle.getUnderlyingPrice(lToken) == 0
+        ) {
+            return
+                fail(
+                    Error.PRICE_ERROR,
+                    FailureInfo.SET_COLLATERAL_FACTOR_WITHOUT_PRICE
+                );
         }
 
         // Set market's collateral factor to new collateral factor, remember old value
@@ -969,7 +1182,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         market.collateralFactorMantissa = newCollateralFactorMantissa;
 
         // Emit event with asset, old collateral factor, and new collateral factor
-        emit NewCollateralFactor(lToken, oldCollateralFactorMantissa, newCollateralFactorMantissa);
+        emit NewCollateralFactor(
+            lToken,
+            oldCollateralFactorMantissa,
+            newCollateralFactorMantissa
+        );
 
         return uint256(Error.NO_ERROR);
     }
@@ -980,10 +1197,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param newLiquidationIncentiveMantissa New liquidationIncentive scaled by 1e18
      * @return uint 0=success, otherwise a failure. (See ErrorReporter for details)
      */
-    function _setLiquidationIncentive(uint256 newLiquidationIncentiveMantissa) external returns (uint256) {
+    function _setLiquidationIncentive(
+        uint256 newLiquidationIncentiveMantissa
+    ) external returns (uint256) {
         // Check caller is admin
         if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_LIQUIDATION_INCENTIVE_OWNER_CHECK);
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.SET_LIQUIDATION_INCENTIVE_OWNER_CHECK
+                );
         }
 
         // Save current value for use in log
@@ -993,7 +1216,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         liquidationIncentiveMantissa = newLiquidationIncentiveMantissa;
 
         // Emit event with old incentive, new incentive
-        emit NewLiquidationIncentive(oldLiquidationIncentiveMantissa, newLiquidationIncentiveMantissa);
+        emit NewLiquidationIncentive(
+            oldLiquidationIncentiveMantissa,
+            newLiquidationIncentiveMantissa
+        );
 
         return uint256(Error.NO_ERROR);
     }
@@ -1006,11 +1232,19 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      */
     function _supportMarket(LToken lToken) external returns (uint256) {
         if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SUPPORT_MARKET_OWNER_CHECK);
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.SUPPORT_MARKET_OWNER_CHECK
+                );
         }
 
         if (markets[address(lToken)].isListed) {
-            return fail(Error.MARKET_ALREADY_LISTED, FailureInfo.SUPPORT_MARKET_EXISTS);
+            return
+                fail(
+                    Error.MARKET_ALREADY_LISTED,
+                    FailureInfo.SUPPORT_MARKET_EXISTS
+                );
         }
 
         lToken.isLToken(); // Sanity check to make sure its really a LToken
@@ -1037,7 +1271,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _initializeMarket(address lToken) internal {
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
+        uint32 blockNumber = safe32(
+            getBlockNumber(),
+            "block number exceeds 32 bits"
+        );
 
         LendMarketState storage supplyState = lendSupplyState[lToken];
         LendMarketState storage borrowState = lendBorrowState[lToken];
@@ -1067,7 +1304,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lTokens The addresses of the markets (tokens) to change the borrow caps for
      * @param newBorrowCaps The new borrow cap values in underlying to be set. A value of 0 corresponds to unlimited borrowing.
      */
-    function _setMarketBorrowCaps(LToken[] calldata lTokens, uint256[] calldata newBorrowCaps) external {
+    function _setMarketBorrowCaps(
+        LToken[] calldata lTokens,
+        uint256[] calldata newBorrowCaps
+    ) external {
         require(
             msg.sender == admin || msg.sender == borrowCapGuardian,
             "only admin or borrow cap guardian can set borrow caps"
@@ -1076,7 +1316,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         uint256 numMarkets = lTokens.length;
         uint256 numBorrowCaps = newBorrowCaps.length;
 
-        require(numMarkets != 0 && numMarkets == numBorrowCaps, "invalid input");
+        require(
+            numMarkets != 0 && numMarkets == numBorrowCaps,
+            "invalid input"
+        );
 
         for (uint256 i = 0; i < numMarkets; i++) {
             borrowCaps[address(lTokens[i])] = newBorrowCaps[i];
@@ -1106,9 +1349,15 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param newPauseGuardian The address of the new Pause Guardian
      * @return uint 0=success, otherwise a failure. (See enum Error for details)
      */
-    function _setPauseGuardian(address newPauseGuardian) public returns (uint256) {
+    function _setPauseGuardian(
+        address newPauseGuardian
+    ) public returns (uint256) {
         if (msg.sender != admin) {
-            return fail(Error.UNAUTHORIZED, FailureInfo.SET_PAUSE_GUARDIAN_OWNER_CHECK);
+            return
+                fail(
+                    Error.UNAUTHORIZED,
+                    FailureInfo.SET_PAUSE_GUARDIAN_OWNER_CHECK
+                );
         }
 
         // Save current value for inclusion in log
@@ -1124,8 +1373,14 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _setMintPaused(LToken lToken, bool state) public returns (bool) {
-        require(markets[address(lToken)].isListed, "cannot pause a market that is not listed");
-        require(msg.sender == pauseGuardian || msg.sender == admin, "only pause guardian and admin can pause");
+        require(
+            markets[address(lToken)].isListed,
+            "cannot pause a market that is not listed"
+        );
+        require(
+            msg.sender == pauseGuardian || msg.sender == admin,
+            "only pause guardian and admin can pause"
+        );
         require(msg.sender == admin || state == true, "only admin can unpause");
 
         mintGuardianPaused[address(lToken)] = state;
@@ -1134,8 +1389,14 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _setBorrowPaused(LToken lToken, bool state) public returns (bool) {
-        require(markets[address(lToken)].isListed, "cannot pause a market that is not listed");
-        require(msg.sender == pauseGuardian || msg.sender == admin, "only pause guardian and admin can pause");
+        require(
+            markets[address(lToken)].isListed,
+            "cannot pause a market that is not listed"
+        );
+        require(
+            msg.sender == pauseGuardian || msg.sender == admin,
+            "only pause guardian and admin can pause"
+        );
         require(msg.sender == admin || state == true, "only admin can unpause");
 
         borrowGuardianPaused[address(lToken)] = state;
@@ -1144,7 +1405,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _setTransferPaused(bool state) public returns (bool) {
-        require(msg.sender == pauseGuardian || msg.sender == admin, "only pause guardian and admin can pause");
+        require(
+            msg.sender == pauseGuardian || msg.sender == admin,
+            "only pause guardian and admin can pause"
+        );
         require(msg.sender == admin || state == true, "only admin can unpause");
 
         transferGuardianPaused = state;
@@ -1153,7 +1417,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _setSeizePaused(bool state) public returns (bool) {
-        require(msg.sender == pauseGuardian || msg.sender == admin, "only pause guardian and admin can pause");
+        require(
+            msg.sender == pauseGuardian || msg.sender == admin,
+            "only pause guardian and admin can pause"
+        );
         require(msg.sender == admin || state == true, "only admin can unpause");
 
         seizeGuardianPaused = state;
@@ -1162,14 +1429,26 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     }
 
     function _become(Unitroller unitroller) public {
-        require(msg.sender == unitroller.admin(), "only unitroller admin can change brains");
-        require(unitroller._acceptImplementation() == 0, "change not authorized");
+        require(
+            msg.sender == unitroller.admin(),
+            "only unitroller admin can change brains"
+        );
+        require(
+            unitroller._acceptImplementation() == 0,
+            "change not authorized"
+        );
     }
 
     /// @notice Delete this function after proposal 65 is executed
-    function fixBadAccruals(address[] calldata affectedUsers, uint256[] calldata amounts) external {
+    function fixBadAccruals(
+        address[] calldata affectedUsers,
+        uint256[] calldata amounts
+    ) external {
         require(msg.sender == admin, "Only admin can call this function"); // Only the timelock can call this function
-        require(!proposal65FixExecuted, "Already executed this one-off function"); // Require that this function is only called once
+        require(
+            !proposal65FixExecuted,
+            "Already executed this one-off function"
+        ); // Require that this function is only called once
         require(affectedUsers.length == amounts.length, "Invalid input");
 
         // Loop variables
@@ -1205,7 +1484,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             if (amountToSubtract > 0) {
                 // Subtract the bad accrual amount from what they have accrued.
                 // Users will keep whatever they have correctly accrued.
-                lendAccrued[user] = newAccrual = sub_(currentAccrual, amountToSubtract);
+                lendAccrued[user] = newAccrual = sub_(
+                    currentAccrual,
+                    amountToSubtract
+                );
 
                 emit LendAccruedAdjusted(user, currentAccrual, newAccrual);
             }
@@ -1231,7 +1513,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param supplySpeed New supply-side LEND speed for market
      * @param borrowSpeed New borrow-side LEND speed for market
      */
-    function setLendSpeedInternal(LToken lToken, uint256 supplySpeed, uint256 borrowSpeed) internal {
+    function setLendSpeedInternal(
+        LToken lToken,
+        uint256 supplySpeed,
+        uint256 borrowSpeed
+    ) internal {
         Market storage market = markets[address(lToken)];
         require(market.isListed, "lend market is not listed");
 
@@ -1275,17 +1561,35 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The market whose supply index to update
      * @dev Index is a cumulative sum of the LEND per lToken accrued.
      */
+    //@seashell: 一個流動池，他會有一個index，這個index表示，現在你每持有一個出借憑證 (1token)
+    //@seashell: 可以附帶多少利息(獎勵代幣)。 你自己用持有的1token乘上index就會知道自己能claim多少利息
+    //@seashell: 這是一個鏈比較省效能的作法。因為不需要用loop去改變每個用戶的利息狀態變數，
+    //@seashell: 我就是統一改"一個"index，每個人能領到的利息就變化了。
+    //@seashell: 這邊的index 會除掉 total supply。所以越多人給資金，index就越小，每個人利息就越少
+    //@seashell: 這代表在資金不多的情況下，來提供流動性的獎勵會很棒。
+
     function updateLendSupplyIndex(address lToken) internal {
+        //取用1Token的LendSupply的block跟index(決定獎勵)
         LendMarketState storage supplyState = lendSupplyState[lToken];
         uint256 supplySpeed = lendSupplySpeeds[lToken];
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
-        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(supplyState.block));
+        uint32 blockNumber = safe32(
+            getBlockNumber(),
+            "block number exceeds 32 bits"
+        );
+        uint256 deltaBlocks = sub_(
+            uint256(blockNumber),
+            uint256(supplyState.block)
+        );
         if (deltaBlocks > 0 && supplySpeed > 0) {
             uint256 supplyTokens = LToken(lToken).totalSupply();
             uint256 lendAccrued = mul_(deltaBlocks, supplySpeed);
-            Double memory ratio = supplyTokens > 0 ? fraction(lendAccrued, supplyTokens) : Double({mantissa: 0});
-            supplyState.index =
-                safe224(add_(Double({mantissa: supplyState.index}), ratio).mantissa, "new index exceeds 224 bits");
+            Double memory ratio = supplyTokens > 0
+                ? fraction(lendAccrued, supplyTokens)
+                : Double({mantissa: 0});
+            supplyState.index = safe224(
+                add_(Double({mantissa: supplyState.index}), ratio).mantissa,
+                "new index exceeds 224 bits"
+            );
             supplyState.block = blockNumber;
         } else if (deltaBlocks > 0) {
             supplyState.block = blockNumber;
@@ -1297,17 +1601,33 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The market whose borrow index to update
      * @dev Index is a cumulative sum of the LEND per lToken accrued.
      */
-    function updateLendBorrowIndex(address lToken, Exp memory marketBorrowIndex) internal {
+    function updateLendBorrowIndex(
+        address lToken,
+        Exp memory marketBorrowIndex
+    ) internal {
         LendMarketState storage borrowState = lendBorrowState[lToken];
         uint256 borrowSpeed = lendBorrowSpeeds[lToken];
-        uint32 blockNumber = safe32(getBlockNumber(), "block number exceeds 32 bits");
-        uint256 deltaBlocks = sub_(uint256(blockNumber), uint256(borrowState.block));
+        uint32 blockNumber = safe32(
+            getBlockNumber(),
+            "block number exceeds 32 bits"
+        );
+        uint256 deltaBlocks = sub_(
+            uint256(blockNumber),
+            uint256(borrowState.block)
+        );
         if (deltaBlocks > 0 && borrowSpeed > 0) {
-            uint256 borrowAmount = div_(LToken(lToken).totalBorrows(), marketBorrowIndex);
+            uint256 borrowAmount = div_(
+                LToken(lToken).totalBorrows(),
+                marketBorrowIndex
+            );
             uint256 lendAccrued = mul_(deltaBlocks, borrowSpeed);
-            Double memory ratio = borrowAmount > 0 ? fraction(lendAccrued, borrowAmount) : Double({mantissa: 0});
-            borrowState.index =
-                safe224(add_(Double({mantissa: borrowState.index}), ratio).mantissa, "new index exceeds 224 bits");
+            Double memory ratio = borrowAmount > 0
+                ? fraction(lendAccrued, borrowAmount)
+                : Double({mantissa: 0});
+            borrowState.index = safe224(
+                add_(Double({mantissa: borrowState.index}), ratio).mantissa,
+                "new index exceeds 224 bits"
+            );
             borrowState.block = blockNumber;
         } else if (deltaBlocks > 0) {
             borrowState.block = blockNumber;
@@ -1339,7 +1659,9 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         }
 
         // Calculate change in the cumulative sum of the LEND per lToken accrued
-        Double memory deltaIndex = Double({mantissa: sub_(supplyIndex, supplierIndex)});
+        Double memory deltaIndex = Double({
+            mantissa: sub_(supplyIndex, supplierIndex)
+        });
 
         uint256 supplierTokens = LToken(lToken).balanceOf(supplier);
 
@@ -1349,7 +1671,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         uint256 supplierAccrued = add_(lendAccrued[supplier], supplierDelta);
         lendAccrued[supplier] = supplierAccrued;
 
-        emit DistributedSupplierLend(LToken(lToken), supplier, supplierDelta, supplyIndex);
+        emit DistributedSupplierLend(
+            LToken(lToken),
+            supplier,
+            supplierDelta,
+            supplyIndex
+        );
     }
 
     /**
@@ -1358,7 +1685,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The market in which the borrower is interacting
      * @param borrower The address of the borrower to distribute LEND to
      */
-    function distributeBorrowerLend(address lToken, address borrower, Exp memory marketBorrowIndex) internal {
+    function distributeBorrowerLend(
+        address lToken,
+        address borrower,
+        Exp memory marketBorrowIndex
+    ) internal {
         // TODO: Don't distribute supplier LEND if the user is not in the borrower market.
         // This check should be as gas efficient as possible as distributeBorrowerLend is called in many places.
         // - We really don't want to call an external contract as that's quite expensive.
@@ -1378,9 +1709,14 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         }
 
         // Calculate change in the cumulative sum of the LEND per borrowed unit accrued
-        Double memory deltaIndex = Double({mantissa: sub_(borrowIndex, borrowerIndex)});
+        Double memory deltaIndex = Double({
+            mantissa: sub_(borrowIndex, borrowerIndex)
+        });
 
-        uint256 borrowerAmount = div_(LToken(lToken).borrowBalanceStored(borrower), marketBorrowIndex);
+        uint256 borrowerAmount = div_(
+            LToken(lToken).borrowBalanceStored(borrower),
+            marketBorrowIndex
+        );
 
         // Calculate LEND accrued: lTokenAmount * accruedPerBorrowedUnit
         uint256 borrowerDelta = mul_(borrowerAmount, deltaIndex);
@@ -1388,7 +1724,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
         uint256 borrowerAccrued = add_(lendAccrued[borrower], borrowerDelta);
         lendAccrued[borrower] = borrowerAccrued;
 
-        emit DistributedBorrowerLend(LToken(lToken), borrower, borrowerDelta, borrowIndex);
+        emit DistributedBorrowerLend(
+            LToken(lToken),
+            borrower,
+            borrowerDelta,
+            borrowIndex
+        );
     }
 
     /**
@@ -1398,10 +1739,16 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
     function updateContributorRewards(address contributor) public {
         uint256 lendSpeed = lendContributorSpeeds[contributor];
         uint256 blockNumber = getBlockNumber();
-        uint256 deltaBlocks = sub_(blockNumber, lastContributorBlock[contributor]);
+        uint256 deltaBlocks = sub_(
+            blockNumber,
+            lastContributorBlock[contributor]
+        );
         if (deltaBlocks > 0 && lendSpeed > 0) {
             uint256 newAccrued = mul_(deltaBlocks, lendSpeed);
-            uint256 contributorAccrued = add_(lendAccrued[contributor], newAccrued);
+            uint256 contributorAccrued = add_(
+                lendAccrued[contributor],
+                newAccrued
+            );
 
             lendAccrued[contributor] = contributorAccrued;
             lastContributorBlock[contributor] = blockNumber;
@@ -1434,7 +1781,12 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param borrowers Whether or not to claim LEND earned by borrowing
      * @param suppliers Whether or not to claim LEND earned by supplying
      */
-    function claimLend(address[] memory holders, LToken[] memory lTokens, bool borrowers, bool suppliers) public {
+    function claimLend(
+        address[] memory holders,
+        LToken[] memory lTokens,
+        bool borrowers,
+        bool suppliers
+    ) public {
         for (uint256 i = 0; i < lTokens.length; i++) {
             LToken lToken = lTokens[i];
             require(markets[address(lToken)].isListed, "market must be listed");
@@ -1442,7 +1794,11 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
                 Exp memory borrowIndex = Exp({mantissa: lToken.borrowIndex()});
                 updateLendBorrowIndex(address(lToken), borrowIndex);
                 for (uint256 j = 0; j < holders.length; j++) {
-                    distributeBorrowerLend(address(lToken), holders[j], borrowIndex);
+                    distributeBorrowerLend(
+                        address(lToken),
+                        holders[j],
+                        borrowIndex
+                    );
                 }
             }
             if (suppliers == true) {
@@ -1453,7 +1809,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
             }
         }
         for (uint256 j = 0; j < holders.length; j++) {
-            lendAccrued[holders[j]] = grantLendInternal(holders[j], lendAccrued[holders[j]]);
+            lendAccrued[holders[j]] = grantLendInternal(
+                holders[j],
+                lendAccrued[holders[j]]
+            );
         }
     }
 
@@ -1464,7 +1823,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param amount The amount of LEND to (possibly) transfer
      * @return The amount of LEND which was NOT transferred to the user
      */
-    function grantLendInternal(address user, uint256 amount) internal returns (uint256) {
+    function grantLendInternal(
+        address user,
+        uint256 amount
+    ) internal returns (uint256) {
         Lend lend = Lend(getLendAddress());
         uint256 lendRemaining = lend.balanceOf(address(this));
         if (amount > 0 && amount <= lendRemaining) {
@@ -1497,14 +1859,17 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param supplySpeeds New supply-side LEND speed for the corresponding market.
      * @param borrowSpeeds New borrow-side LEND speed for the corresponding market.
      */
-    function _setLendSpeeds(LToken[] memory lTokens, uint256[] memory supplySpeeds, uint256[] memory borrowSpeeds)
-        public
-    {
+    function _setLendSpeeds(
+        LToken[] memory lTokens,
+        uint256[] memory supplySpeeds,
+        uint256[] memory borrowSpeeds
+    ) public {
         require(adminOrInitializing(), "only admin can set lend speed");
 
         uint256 numTokens = lTokens.length;
         require(
-            numTokens == supplySpeeds.length && numTokens == borrowSpeeds.length,
+            numTokens == supplySpeeds.length &&
+                numTokens == borrowSpeeds.length,
             "Lendtroller::_setLendSpeeds invalid input"
         );
 
@@ -1518,7 +1883,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param contributor The contributor whose LEND speed to update
      * @param lendSpeed New LEND speed for contributor
      */
-    function _setContributorLendSpeed(address contributor, uint256 lendSpeed) public {
+    function _setContributorLendSpeed(
+        address contributor,
+        uint256 lendSpeed
+    ) public {
         require(adminOrInitializing(), "only admin can set lend speed");
 
         // note that LEND speed could be set to 0 to halt liquidity rewards for a contributor
@@ -1548,7 +1916,9 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The lToken to get the collateral factor mantissa for
      * @return The collateral factor mantissa
      */
-    function getCollateralFactorMantissa(address lToken) public view returns (uint256) {
+    function getCollateralFactorMantissa(
+        address lToken
+    ) public view returns (uint256) {
         return markets[lToken].collateralFactorMantissa;
     }
 
@@ -1558,8 +1928,10 @@ contract Lendtroller is LendtrollerV7Storage, LendtrollerInterface, LendtrollerE
      * @param lToken The market to check if deprecated
      */
     function isDeprecated(LToken lToken) public view returns (bool) {
-        return markets[address(lToken)].collateralFactorMantissa == 0 && borrowGuardianPaused[address(lToken)] == true
-            && lToken.reserveFactorMantissa() == 1e18;
+        return
+            markets[address(lToken)].collateralFactorMantissa == 0 &&
+            borrowGuardianPaused[address(lToken)] == true &&
+            lToken.reserveFactorMantissa() == 1e18;
     }
 
     function getBlockNumber() public view virtual returns (uint256) {

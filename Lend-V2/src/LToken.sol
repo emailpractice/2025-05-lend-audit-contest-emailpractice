@@ -6,14 +6,18 @@ import "./LTokenInterfaces.sol";
 import "./ErrorReporter.sol";
 import "./EIP20Interface.sol";
 import "./InterestRateModel.sol";
-import "./ExponentialNoError.sol"exchangeRateStored;
+import "./ExponentialNoError.sol";
 
 /**
  * @title Lend's LToken Contract
  * @notice Abstract base for LTokens
  * @author Compound
  */
-abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorReporter {
+abstract contract LToken is
+    LTokenInterface,
+    ExponentialNoError,
+    TokenErrorReporter
+{
     /**
      * @notice Initialize the money market
      * @param lendtroller_ The address of the Lendtroller
@@ -32,11 +36,17 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         uint8 decimals_
     ) public {
         require(msg.sender == admin, "only admin may initialize the market");
-        require(accrualBlockNumber == 0 && borrowIndex == 0, "market may only be initialized once");
+        require(
+            accrualBlockNumber == 0 && borrowIndex == 0,
+            "market may only be initialized once"
+        );
 
         // Set initial exchange rate
         initialExchangeRateMantissa = initialExchangeRateMantissa_;
-        require(initialExchangeRateMantissa > 0, "initial exchange rate must be greater than zero.");
+        require(
+            initialExchangeRateMantissa > 0,
+            "initial exchange rate must be greater than zero."
+        );
 
         // Set the lendtroller
         uint256 err = _setLendtroller(lendtroller_);
@@ -67,9 +77,19 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param tokens The number of tokens to transfer
      * @return 0 if the transfer succeeded, else revert
      */
-    function transferTokens(address spender, address src, address dst, uint256 tokens) internal returns (uint256) {
+    function transferTokens(
+        address spender,
+        address src,
+        address dst,
+        uint256 tokens
+    ) internal returns (uint256) {
         /* Fail if transfer not allowed */
-        uint256 allowed = lendtroller.transferAllowed(address(this), src, dst, tokens);
+        uint256 allowed = lendtroller.transferAllowed(
+            address(this),
+            src,
+            dst,
+            tokens
+        );
         if (allowed != 0) {
             revert TransferLendtrollerRejection(allowed);
         }
@@ -119,7 +139,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param amount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transfer(address dst, uint256 amount) external override nonReentrant returns (bool) {
+    function transfer(
+        address dst,
+        uint256 amount
+    ) external override nonReentrant returns (bool) {
         return transferTokens(msg.sender, msg.sender, dst, amount) == NO_ERROR;
     }
 
@@ -130,7 +153,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param amount The number of tokens to transfer
      * @return Whether or not the transfer succeeded
      */
-    function transferFrom(address src, address dst, uint256 amount) external override nonReentrant returns (bool) {
+    function transferFrom(
+        address src,
+        address dst,
+        uint256 amount
+    ) external override nonReentrant returns (bool) {
         return transferTokens(msg.sender, src, dst, amount) == NO_ERROR;
     }
 
@@ -142,7 +169,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param amount The number of tokens that are approved (uint256.max means infinite)
      * @return Whether or not the approval succeeded
      */
-    function approve(address spender, uint256 amount) external override returns (bool) {
+    function approve(
+        address spender,
+        uint256 amount
+    ) external override returns (bool) {
         address src = msg.sender;
         transferAllowances[src][spender] = amount;
         emit Approval(src, spender, amount);
@@ -155,7 +185,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param spender The address of the account which may transfer tokens
      * @return The number of tokens allowed to be spent (-1 means infinite)
      */
-    function allowance(address owner, address spender) external view override returns (uint256) {
+    function allowance(
+        address owner,
+        address spender
+    ) external view override returns (uint256) {
         return transferAllowances[owner][spender];
     }
 
@@ -174,7 +207,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param owner The address of the account to query
      * @return The amount of underlying owned by `owner`
      */
-    function balanceOfUnderlying(address owner) external override returns (uint256) {
+    function balanceOfUnderlying(
+        address owner
+    ) external override returns (uint256) {
         Exp memory exchangeRate = Exp({mantissa: exchangeRateCurrent()});
         return mul_ScalarTruncate(exchangeRate, accountTokens[owner]);
     }
@@ -185,15 +220,22 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param account Address of the account to snapshot
      * @return (possible error, token balance, borrow balance, exchange rate mantissa)
      */
-    function getAccountSnapshot(address account) external view override returns (uint256, uint256, uint256, uint256) {
-        return (NO_ERROR, accountTokens[account], borrowBalanceStoredInternal(account), exchangeRateStoredInternal());
+    function getAccountSnapshot(
+        address account
+    ) external view override returns (uint256, uint256, uint256, uint256) {
+        return (
+            NO_ERROR,
+            accountTokens[account],
+            borrowBalanceStoredInternal(account),
+            exchangeRateStoredInternal()
+        );
     }
 
     /**
      * @dev Function to simply retrieve block number
      *  This exists mainly for inheriting test contracts to stub this result.
      */
-     //@seashell多包一層函數好像只是為了測試的時候能亂改block.number的值? 但如果能仿冒block.number 有沒有包一層也都無所謂吧
+    //@seashell多包一層函數好像只是為了測試的時候能亂改block.number的值? 但如果能仿冒block.number 有沒有包一層也都無所謂吧
     function getBlockNumber() internal view virtual returns (uint256) {
         return block.number;
     }
@@ -203,7 +245,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @return The borrow interest rate per block, scaled by 1e18
      */
     function borrowRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getBorrowRate(getCashPrior(), totalBorrows, totalReserves);
+        return
+            interestRateModel.getBorrowRate(
+                getCashPrior(),
+                totalBorrows,
+                totalReserves
+            );
     }
 
     /**
@@ -211,14 +258,25 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @return The supply interest rate per block, scaled by 1e18
      */
     function supplyRatePerBlock() external view override returns (uint256) {
-        return interestRateModel.getSupplyRate(getCashPrior(), totalBorrows, totalReserves, reserveFactorMantissa);
+        return
+            interestRateModel.getSupplyRate(
+                getCashPrior(),
+                totalBorrows,
+                totalReserves,
+                reserveFactorMantissa
+            );
     }
 
     /**
      * @notice Returns the current total borrows plus accrued interest
      * @return The total borrows with interest
      */
-    function totalBorrowsCurrent() external override nonReentrant returns (uint256) {
+    function totalBorrowsCurrent()
+        external
+        override
+        nonReentrant
+        returns (uint256)
+    {
         accrueInterest();
         return totalBorrows;
     }
@@ -228,7 +286,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param account The address whose balance should be calculated after updating borrowIndex
      * @return The calculated balance
      */
-    function borrowBalanceCurrent(address account) external override nonReentrant returns (uint256) {
+    function borrowBalanceCurrent(
+        address account
+    ) external override nonReentrant returns (uint256) {
         accrueInterest();
         return borrowBalanceStored(account);
     }
@@ -238,7 +298,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param account The address whose balance should be calculated
      * @return The calculated balance
      */
-    function borrowBalanceStored(address account) public view override returns (uint256) {
+    function borrowBalanceStored(
+        address account
+    ) public view override returns (uint256) {
         return borrowBalanceStoredInternal(account);
     }
 
@@ -247,7 +309,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param account The address whose balance should be calculated
      * @return (error code, the calculated balance or 0 if error code is non-zero)
      */
-    function borrowBalanceStoredInternal(address account) internal view returns (uint256) {
+    function borrowBalanceStoredInternal(
+        address account
+    ) internal view returns (uint256) {
         /* Get borrowBalance and borrowIndex */
         BorrowSnapshot storage borrowSnapshot = accountBorrows[account];
 
@@ -269,7 +333,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @notice Accrue interest then return the up-to-date exchange rate
      * @return Calculated exchange rate scaled by 1e18
      */
-    function exchangeRateCurrent() public override nonReentrant returns (uint256) {
+    function exchangeRateCurrent()
+        public
+        override
+        nonReentrant
+        returns (uint256)
+    {
         accrueInterest();
         return exchangeRateStored();
     }
@@ -288,7 +357,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev This function does not accrue interest before calculating the exchange rate
      * @return calculated exchange rate scaled by 1e18
      */
-    function exchangeRateStoredInternal() internal view virtual returns (uint256) {
+    function exchangeRateStoredInternal()
+        internal
+        view
+        virtual
+        returns (uint256)
+    {
         uint256 _totalSupply = totalSupply;
         if (_totalSupply == 0) {
             /*
@@ -302,8 +376,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
              *  exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
              */
             uint256 totalCash = getCashPrior();
-            uint256 cashPlusBorrowsMinusReserves = totalCash + totalBorrows - totalReserves;
-            uint256 exchangeRate = cashPlusBorrowsMinusReserves * expScale / _totalSupply;
+            uint256 cashPlusBorrowsMinusReserves = totalCash +
+                totalBorrows -
+                totalReserves;
+            uint256 exchangeRate = (cashPlusBorrowsMinusReserves * expScale) /
+                _totalSupply;
 
             return exchangeRate;
         }
@@ -327,7 +404,6 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         uint256 currentBlockNumber = getBlockNumber(); //@seashell用block.number取得現在區塊記錄到哪。看是哪條鍊就哪條的
         uint256 accrualBlockNumberPrior = accrualBlockNumber; //@seashell Block number that interest was last accrued at
 
-
         /* Short-circuit accumulating 0 interest */
         if (accrualBlockNumberPrior == currentBlockNumber) {
             return NO_ERROR; //@seashell no_error是常數0。 這樣寫是常見的，用語義化的方式表達正確或錯誤。
@@ -346,13 +422,20 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         //@seashell 但我實在不知道它選誰，所以我就隨便選一個合約看具體實現。 這個repo雖然有更多人是繼承interestRatemodel
         // 但只有兩個是有
         //最後選定了 jumpRateModelV2.sol 因為它至少是V2 看起來像是比較新的實現
-        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(cashPrior, borrowsPrior, reservesPrior);
-//@seashell: 我想知道的是，同一個block 他的這些利率變數都不會再改了。 
-// 可是交易還在進行 還在累積阿 萬一區塊的第一筆交易讓利率大幅變動 但同區塊的最後一筆交易，卻還是會採用原本的利率。 有沒有這種危險呢? 
+        uint256 borrowRateMantissa = interestRateModel.getBorrowRate(
+            cashPrior,
+            borrowsPrior,
+            reservesPrior
+        );
+        //@seashell: 我想知道的是，同一個block 他的這些利率變數都不會再改了。
+        // 可是交易還在進行 還在累積阿 萬一區塊的第一筆交易讓利率大幅變動 但同區塊的最後一筆交易，卻還是會採用原本的利率。 有沒有這種危險呢?
 
-        require(borrowRateMantissa <= borrowRateMaxMantissa, "borrow rate is absurdly high");
+        require(
+            borrowRateMantissa <= borrowRateMaxMantissa,
+            "borrow rate is absurdly high"
+        );
 
-//@seashell:  算整個協議所有借款人的利息累積起來。 先計算從上次更新到現在過了多少block，再去乘上多少次利率這樣
+        //@seashell:  算整個協議所有借款人的利息累積起來。 先計算從上次更新到現在過了多少block，再去乘上多少次利率這樣
         /* Calculate the number of blocks elapsed since the last accrual */
         uint256 blockDelta = currentBlockNumber - accrualBlockNumberPrior;
 
@@ -364,16 +447,29 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
          *  totalReservesNew = interestAccumulated * reserveFactor + totalReserves
          *  borrowIndexNew = simpleInterestFactor * borrowIndex + borrowIndex
          */
-//@seashell: mul是來做小數點用的    第一行應該是 3區塊* borrowRate 
-// borrowRate好像是平均利率。 所以可以拿來算出整個協議待收的利息，
-// 個別借款人的利息，會用index來表達。 比如他借的利率其實比較高，那就borroRate * 1.1
+        //@seashell: mul是來做小數點用的    第一行應該是 3區塊* borrowRate
+        // borrowRate好像是平均利率。 所以可以拿來算出整個協議待收的利息，
+        // 個別借款人的利息，會用index來表達。 比如他借的利率其實比較高，那就borroRate * 1.1
 
-        Exp memory simpleInterestFactor = mul_(Exp({mantissa: borrowRateMantissa}), blockDelta);
-        uint256 interestAccumulated = mul_ScalarTruncate(simpleInterestFactor, borrowsPrior);
+        Exp memory simpleInterestFactor = mul_(
+            Exp({mantissa: borrowRateMantissa}),
+            blockDelta
+        );
+        uint256 interestAccumulated = mul_ScalarTruncate(
+            simpleInterestFactor,
+            borrowsPrior
+        );
         uint256 totalBorrowsNew = interestAccumulated + borrowsPrior;
-        uint256 totalReservesNew =
-            mul_ScalarTruncateAddUInt(Exp({mantissa: reserveFactorMantissa}), interestAccumulated, reservesPrior);
-        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(simpleInterestFactor, borrowIndexPrior, borrowIndexPrior);
+        uint256 totalReservesNew = mul_ScalarTruncateAddUInt(
+            Exp({mantissa: reserveFactorMantissa}),
+            interestAccumulated,
+            reservesPrior
+        );
+        uint256 borrowIndexNew = mul_ScalarTruncateAddUInt(
+            simpleInterestFactor,
+            borrowIndexPrior,
+            borrowIndexPrior
+        );
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -386,7 +482,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         totalReserves = totalReservesNew;
 
         /* We emit an AccrueInterest event */
-        emit AccrueInterest(cashPrior, interestAccumulated, borrowIndexNew, totalBorrowsNew);
+        emit AccrueInterest(
+            cashPrior,
+            interestAccumulated,
+            borrowIndexNew,
+            totalBorrowsNew
+        );
 
         return NO_ERROR;
     }
@@ -410,7 +511,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      */
     function mintFresh(address minter, uint256 mintAmount) internal {
         /* Fail if mint not allowed */
-        uint256 allowed = lendtroller.mintAllowed(address(this), minter, mintAmount);
+        uint256 allowed = lendtroller.mintAllowed(
+            address(this),
+            minter,
+            mintAmount
+        );
         if (allowed != 0) {
             revert MintLendtrollerRejection(allowed);
         }
@@ -477,7 +582,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Accrues interest whether or not the operation succeeds, unless reverted
      * @param redeemAmount The amount of underlying to receive from redeeming lTokens
      */
-    function redeemUnderlyingInternal(uint256 redeemAmount) internal nonReentrant {
+    function redeemUnderlyingInternal(
+        uint256 redeemAmount
+    ) internal nonReentrant {
         accrueInterest();
         // redeemFresh emits redeem-specific logs on errors, so we don't need to
         redeemFresh(payable(msg.sender), 0, redeemAmount);
@@ -490,8 +597,15 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param redeemTokensIn The number of lTokens to redeem into underlying (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      * @param redeemAmountIn The number of underlying tokens to receive from redeeming lTokens (only one of redeemTokensIn or redeemAmountIn may be non-zero)
      */
-    function redeemFresh(address payable redeemer, uint256 redeemTokensIn, uint256 redeemAmountIn) internal {
-        require(redeemTokensIn == 0 || redeemAmountIn == 0, "one of redeemTokensIn or redeemAmountIn must be zero");
+    function redeemFresh(
+        address payable redeemer,
+        uint256 redeemTokensIn,
+        uint256 redeemAmountIn
+    ) internal {
+        require(
+            redeemTokensIn == 0 || redeemAmountIn == 0,
+            "one of redeemTokensIn or redeemAmountIn must be zero"
+        );
 
         /* exchangeRate = invoke Exchange Rate Stored() */
         Exp memory exchangeRate = Exp({mantissa: exchangeRateStoredInternal()});
@@ -518,7 +632,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         }
 
         /* Fail if redeem not allowed */
-        uint256 allowed = lendtroller.redeemAllowed(address(this), redeemer, redeemTokens);
+        uint256 allowed = lendtroller.redeemAllowed(
+            address(this),
+            redeemer,
+            redeemTokens
+        );
         if (allowed != 0) {
             revert RedeemLendtrollerRejection(allowed);
         }
@@ -557,7 +675,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         emit Redeem(redeemer, redeemAmount, redeemTokens);
 
         /* We call the defense hook */
-        lendtroller.redeemVerify(address(this), redeemer, redeemAmount, redeemTokens);
+        lendtroller.redeemVerify(
+            address(this),
+            redeemer,
+            redeemAmount,
+            redeemTokens
+        );
     }
 
     /**
@@ -574,9 +697,16 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @notice Users borrow assets from the protocol to their own address
      * @param borrowAmount The amount of the underlying asset to borrow
      */
-    function borrowFresh(address payable borrower, uint256 borrowAmount) internal {
+    function borrowFresh(
+        address payable borrower,
+        uint256 borrowAmount
+    ) internal {
         /* Fail if borrow not allowed */
-        uint256 allowed = lendtroller.borrowAllowed(address(this), borrower, borrowAmount);
+        uint256 allowed = lendtroller.borrowAllowed(
+            address(this),
+            borrower,
+            borrowAmount
+        );
         if (allowed != 0) {
             revert BorrowLendtrollerRejection(allowed);
         }
@@ -639,7 +769,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param borrower the account with the debt being payed off
      * @param repayAmount The amount to repay, or -1 for the full outstanding amount
      */
-    function repayBorrowBehalfInternal(address borrower, uint256 repayAmount) internal nonReentrant {
+    function repayBorrowBehalfInternal(
+        address borrower,
+        uint256 repayAmount
+    ) internal nonReentrant {
         accrueInterest();
         // repayBorrowFresh emits repay-borrow-specific logs on errors, so we don't need to
         repayBorrowFresh(msg.sender, borrower, repayAmount);
@@ -652,9 +785,18 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param repayAmount the amount of underlying tokens being returned, or -1 for the full outstanding amount
      * @return (uint) the actual repayment amount.
      */
-    function repayBorrowFresh(address payer, address borrower, uint256 repayAmount) internal returns (uint256) {
+    function repayBorrowFresh(
+        address payer,
+        address borrower,
+        uint256 repayAmount
+    ) internal returns (uint256) {
         /* Fail if repayBorrow not allowed */
-        uint256 allowed = lendtroller.repayBorrowAllowed(address(this), payer, borrower, repayAmount);
+        uint256 allowed = lendtroller.repayBorrowAllowed(
+            address(this),
+            payer,
+            borrower,
+            repayAmount
+        );
         if (allowed != 0) {
             revert RepayBorrowLendtrollerRejection(allowed);
         }
@@ -668,7 +810,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         uint256 accountBorrowsPrev = borrowBalanceStoredInternal(borrower);
 
         /* If repayAmount == -1, repayAmount = accountBorrows */
-        uint256 repayAmountFinal = repayAmount == type(uint256).max ? accountBorrowsPrev : repayAmount;
+        uint256 repayAmountFinal = repayAmount == type(uint256).max
+            ? accountBorrowsPrev
+            : repayAmount;
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
@@ -697,7 +841,13 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         totalBorrows = totalBorrowsNew;
 
         /* We emit a RepayBorrow event */
-        emit RepayBorrow(payer, borrower, actualRepayAmount, accountBorrowsNew, totalBorrowsNew);
+        emit RepayBorrow(
+            payer,
+            borrower,
+            actualRepayAmount,
+            accountBorrowsNew,
+            totalBorrowsNew
+        );
 
         return actualRepayAmount;
     }
@@ -709,10 +859,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param lTokenCollateral The market in which to seize collateral from the borrower
      * @param repayAmount The amount of the underlying borrowed asset to repay
      */
-    function liquidateBorrowInternal(address borrower, uint256 repayAmount, LTokenInterface lTokenCollateral)
-        internal
-        nonReentrant
-    {
+    function liquidateBorrowInternal(
+        address borrower,
+        uint256 repayAmount,
+        LTokenInterface lTokenCollateral
+    ) internal nonReentrant {
         accrueInterest();
 
         uint256 error = lTokenCollateral.accrueInterest();
@@ -722,7 +873,12 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         }
 
         // liquidateBorrowFresh emits borrow-specific logs on errors, so we don't need to
-        liquidateBorrowFresh(msg.sender, borrower, repayAmount, lTokenCollateral);
+        liquidateBorrowFresh(
+            msg.sender,
+            borrower,
+            repayAmount,
+            lTokenCollateral
+        );
     }
 
     /**
@@ -741,7 +897,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
     ) internal {
         /* Fail if liquidate not allowed */
         uint256 allowed = lendtroller.liquidateBorrowAllowed(
-            address(this), address(lTokenCollateral), liquidator, borrower, repayAmount
+            address(this),
+            address(lTokenCollateral),
+            liquidator,
+            borrower,
+            repayAmount
         );
         if (allowed != 0) {
             revert LiquidateLendtrollerRejection(allowed);
@@ -773,29 +933,53 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         }
 
         /* Fail if repayBorrow fails */
-        uint256 actualRepayAmount = repayBorrowFresh(liquidator, borrower, repayAmount);
+        uint256 actualRepayAmount = repayBorrowFresh(
+            liquidator,
+            borrower,
+            repayAmount
+        );
 
         /////////////////////////
         // EFFECTS & INTERACTIONS
         // (No safe failures beyond this point)
 
         /* We calculate the number of collateral tokens that will be seized */
-        (uint256 amountSeizeError, uint256 seizeTokens) =
-            lendtroller.liquidateCalculateSeizeTokens(address(this), address(lTokenCollateral), actualRepayAmount);
-        require(amountSeizeError == NO_ERROR, "LIQUIDATE_LENDTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED");
+        (uint256 amountSeizeError, uint256 seizeTokens) = lendtroller
+            .liquidateCalculateSeizeTokens(
+                address(this),
+                address(lTokenCollateral),
+                actualRepayAmount
+            );
+        require(
+            amountSeizeError == NO_ERROR,
+            "LIQUIDATE_LENDTROLLER_CALCULATE_AMOUNT_SEIZE_FAILED"
+        );
 
         /* Revert if borrower collateral token balance < seizeTokens */
-        require(lTokenCollateral.balanceOf(borrower) >= seizeTokens, "LIQUIDATE_SEIZE_TOO_MUCH");
+        require(
+            lTokenCollateral.balanceOf(borrower) >= seizeTokens,
+            "LIQUIDATE_SEIZE_TOO_MUCH"
+        );
 
         // If this is also the collateral, run seizeInternal to avoid re-entrancy, otherwise make an external call
         if (address(lTokenCollateral) == address(this)) {
             seizeInternal(address(this), liquidator, borrower, seizeTokens);
         } else {
-            require(lTokenCollateral.seize(liquidator, borrower, seizeTokens) == NO_ERROR, "token seizure failed");
+            require(
+                lTokenCollateral.seize(liquidator, borrower, seizeTokens) ==
+                    NO_ERROR,
+                "token seizure failed"
+            );
         }
 
         /* We emit a LiquidateBorrow event */
-        emit LiquidateBorrow(liquidator, borrower, actualRepayAmount, address(lTokenCollateral), seizeTokens);
+        emit LiquidateBorrow(
+            liquidator,
+            borrower,
+            actualRepayAmount,
+            address(lTokenCollateral),
+            seizeTokens
+        );
     }
 
     /**
@@ -807,12 +991,11 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param seizeTokens The number of lTokens to seize
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function seize(address liquidator, address borrower, uint256 seizeTokens)
-        external
-        override
-        nonReentrant
-        returns (uint256)
-    {
+    function seize(
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens
+    ) external override nonReentrant returns (uint256) {
         seizeInternal(msg.sender, liquidator, borrower, seizeTokens);
 
         return NO_ERROR;
@@ -827,9 +1010,20 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param borrower The account having collateral seized
      * @param seizeTokens The number of lTokens to seize
      */
-    function seizeInternal(address seizerToken, address liquidator, address borrower, uint256 seizeTokens) internal {
+    function seizeInternal(
+        address seizerToken,
+        address liquidator,
+        address borrower,
+        uint256 seizeTokens
+    ) internal {
         /* Fail if seize not allowed */
-        uint256 allowed = lendtroller.seizeAllowed(address(this), seizerToken, liquidator, borrower, seizeTokens);
+        uint256 allowed = lendtroller.seizeAllowed(
+            address(this),
+            seizerToken,
+            liquidator,
+            borrower,
+            seizeTokens
+        );
         if (allowed != 0) {
             revert LiquidateSeizeLendtrollerRejection(allowed);
         }
@@ -844,10 +1038,16 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
          *  borrowerTokensNew = accountTokens[borrower] - seizeTokens
          *  liquidatorTokensNew = accountTokens[liquidator] + seizeTokens
          */
-        uint256 protocolSeizeTokens = mul_(seizeTokens, Exp({mantissa: protocolSeizeShareMantissa}));
+        uint256 protocolSeizeTokens = mul_(
+            seizeTokens,
+            Exp({mantissa: protocolSeizeShareMantissa})
+        );
         uint256 liquidatorSeizeTokens = seizeTokens - protocolSeizeTokens;
         Exp memory exchangeRate = Exp({mantissa: exchangeRateStoredInternal()});
-        uint256 protocolSeizeAmount = mul_ScalarTruncate(exchangeRate, protocolSeizeTokens);
+        uint256 protocolSeizeAmount = mul_ScalarTruncate(
+            exchangeRate,
+            protocolSeizeTokens
+        );
         uint256 totalReservesNew = totalReserves + protocolSeizeAmount;
 
         /////////////////////////
@@ -858,12 +1058,18 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         totalReserves = totalReservesNew;
         totalSupply = totalSupply - protocolSeizeTokens;
         accountTokens[borrower] = accountTokens[borrower] - seizeTokens;
-        accountTokens[liquidator] = accountTokens[liquidator] + liquidatorSeizeTokens;
+        accountTokens[liquidator] =
+            accountTokens[liquidator] +
+            liquidatorSeizeTokens;
 
         /* Emit a Transfer event */
         emit Transfer(borrower, liquidator, liquidatorSeizeTokens);
         emit Transfer(borrower, address(this), protocolSeizeTokens);
-        emit ReservesAdded(address(this), protocolSeizeAmount, totalReservesNew);
+        emit ReservesAdded(
+            address(this),
+            protocolSeizeAmount,
+            totalReservesNew
+        );
     }
 
     /**
@@ -876,7 +1082,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param newPendingAdmin New pending admin.
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setPendingAdmin(address payable newPendingAdmin) external override returns (uint256) {
+    function _setPendingAdmin(
+        address payable newPendingAdmin
+    ) external override returns (uint256) {
         // Check caller = admin
         if (msg.sender != admin) {
             revert SetPendingAdminOwnerCheck();
@@ -926,7 +1134,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Admin function to set a new lendtroller
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setLendtroller(LendtrollerInterface newLendtroller) public override returns (uint256) {
+    function _setLendtroller(
+        LendtrollerInterface newLendtroller
+    ) public override returns (uint256) {
         // Check caller is admin
         if (msg.sender != admin) {
             revert SetLendtrollerOwnerCheck();
@@ -950,7 +1160,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Admin function to accrue interest and set a new reserve factor
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setReserveFactor(uint256 newReserveFactorMantissa) external override nonReentrant returns (uint256) {
+    function _setReserveFactor(
+        uint256 newReserveFactorMantissa
+    ) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _setReserveFactorFresh emits reserve-factor-specific logs on errors, so we don't need to.
         return _setReserveFactorFresh(newReserveFactorMantissa);
@@ -961,7 +1173,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Admin function to set a new reserve factor
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setReserveFactorFresh(uint256 newReserveFactorMantissa) internal returns (uint256) {
+    function _setReserveFactorFresh(
+        uint256 newReserveFactorMantissa
+    ) internal returns (uint256) {
         // Check caller is admin
         if (msg.sender != admin) {
             revert SetReserveFactorAdminCheck();
@@ -980,7 +1194,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         uint256 oldReserveFactorMantissa = reserveFactorMantissa;
         reserveFactorMantissa = newReserveFactorMantissa;
 
-        emit NewReserveFactor(oldReserveFactorMantissa, newReserveFactorMantissa);
+        emit NewReserveFactor(
+            oldReserveFactorMantissa,
+            newReserveFactorMantissa
+        );
 
         return NO_ERROR;
     }
@@ -990,7 +1207,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param addAmount Amount of addition to reserves
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _addReservesInternal(uint256 addAmount) internal nonReentrant returns (uint256) {
+    function _addReservesInternal(
+        uint256 addAmount
+    ) internal nonReentrant returns (uint256) {
         accrueInterest();
 
         // _addReservesFresh emits reserve-addition-specific logs on errors, so we don't need to.
@@ -1004,7 +1223,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param addAmount Amount of addition to reserves
      * @return (uint, uint) An error code (0=success, otherwise a failure (see ErrorReporter.sol for details)) and the actual amount added, net token fees
      */
-    function _addReservesFresh(uint256 addAmount) internal returns (uint256, uint256) {
+    function _addReservesFresh(
+        uint256 addAmount
+    ) internal returns (uint256, uint256) {
         // totalReserves + actualAddAmount
         uint256 totalReservesNew;
         uint256 actualAddAmount;
@@ -1045,7 +1266,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param reduceAmount Amount of reduction to reserves
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _reduceReserves(uint256 reduceAmount) external override nonReentrant returns (uint256) {
+    function _reduceReserves(
+        uint256 reduceAmount
+    ) external override nonReentrant returns (uint256) {
         accrueInterest();
         // _reduceReservesFresh emits reserve-reduction-specific logs on errors, so we don't need to.
         return _reduceReservesFresh(reduceAmount);
@@ -1057,7 +1280,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param reduceAmount Amount of reduction to reserves
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _reduceReservesFresh(uint256 reduceAmount) internal returns (uint256) {
+    function _reduceReservesFresh(
+        uint256 reduceAmount
+    ) internal returns (uint256) {
         // totalReserves - reduceAmount
         uint256 totalReservesNew;
 
@@ -1104,7 +1329,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param newInterestRateModel the new interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setInterestRateModel(InterestRateModel newInterestRateModel) public override returns (uint256) {
+    function _setInterestRateModel(
+        InterestRateModel newInterestRateModel
+    ) public override returns (uint256) {
         accrueInterest();
         // _setInterestRateModelFresh emits interest-rate-model-update-specific logs on errors, so we don't need to.
         return _setInterestRateModelFresh(newInterestRateModel);
@@ -1116,7 +1343,9 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @param newInterestRateModel the new interest rate model to use
      * @return uint 0=success, otherwise a failure (see ErrorReporter.sol for details)
      */
-    function _setInterestRateModelFresh(InterestRateModel newInterestRateModel) internal returns (uint256) {
+    function _setInterestRateModelFresh(
+        InterestRateModel newInterestRateModel
+    ) internal returns (uint256) {
         // Used to store old model for use in the event that is emitted on success
         InterestRateModel oldInterestRateModel;
 
@@ -1134,13 +1363,19 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
         oldInterestRateModel = interestRateModel;
 
         // Ensure invoke newInterestRateModel.isInterestRateModel() returns true
-        require(newInterestRateModel.isInterestRateModel(), "marker method returned false");
+        require(
+            newInterestRateModel.isInterestRateModel(),
+            "marker method returned false"
+        );
 
         // Set the interest rate model to newInterestRateModel
         interestRateModel = newInterestRateModel;
 
         // Emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel)
-        emit NewMarketInterestRateModel(oldInterestRateModel, newInterestRateModel);
+        emit NewMarketInterestRateModel(
+            oldInterestRateModel,
+            newInterestRateModel
+        );
 
         return NO_ERROR;
     }
@@ -1160,7 +1395,10 @@ abstract contract LToken is LTokenInterface, ExponentialNoError, TokenErrorRepor
      * @dev Performs a transfer in, reverting upon failure. Returns the amount actually transferred to the protocol, in case of a fee.
      *  This may revert due to insufficient balance or insufficient allowance.
      */
-    function doTransferIn(address from, uint256 amount) internal virtual returns (uint256);
+    function doTransferIn(
+        address from,
+        uint256 amount
+    ) internal virtual returns (uint256);
 
     /**
      * @dev Performs a transfer out, ideally returning an explanatory error code upon failure rather than reverting.
