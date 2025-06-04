@@ -108,7 +108,7 @@ contract CoreRouter is Ownable, ExponentialNoError {
         //@seashell       If there are no tokens minted: exchangeRate = initialExchangeRate
         //@seashell Otherwise: exchangeRate = (totalCash + totalBorrows - totalReserves) / totalSupply
 
-        // Mint lTokens
+        // Mint lTokens。 //@seashell的猜測:  我感覺mint 應該要登記mint數量，然後"可能"會包含把代幣所有權移轉的邏輯。
         require(LErc20Interface(_lToken).mint(_amount) == 0, "Mint failed");
         //@seashell在src/LErc20.sol
         // @audit1: mint是external 然後沒有modifier的。會呼叫Ltoken的mintInternal  (internal nonReentrant)
